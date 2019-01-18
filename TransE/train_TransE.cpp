@@ -78,6 +78,7 @@ private:
         int nepoch = 1000;
         int batchsize = triples.size() / nbatches;
 
+        FILE* fscore = fopen( (path_res_output + "/cost.txt").c_str() , "w");
         // mini-batch training
         for (int epoch = 0; epoch < nepoch; epoch++) {
             res = 0;
@@ -94,11 +95,13 @@ private:
             }
 
             cout << res << endl;
-            if( (epoch + 1) % 1000 == 0 ) {
+            fprintf(fscore, "%.6lf\n", res);
+
+            if( (epoch + 1) % 1000 == 0 )
                 write_epoch_result_file(epoch);
-            }          
             
         }
+        fclose(fscore);
 
     }
 
@@ -182,8 +185,8 @@ private:
         while(epoch_str.length() < 3) 
             epoch_str = "0" + epoch_str;
 
-        FILE *f2 = fopen(("./result/relation2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
-        FILE *f3 = fopen(("./result/entity2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
+        FILE *f2 = fopen(( path_res_output + "/relation2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
+        FILE *f3 = fopen(( path_res_output + "/entity2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
         for (int i = 0; i < relation_num; i++) {
             fprintf(f2, "%s\t", id2relation[i].c_str() );
             for (int ii = 0; ii < k; ii++)
@@ -224,6 +227,13 @@ public:
 
 struct Preprocess
 {
+    void init_make_result_path (){
+        cout << "mkdir result file      ...    ";
+        system((string("mkdir ") + path_res_output).c_str());
+        system((string("rm ")    + path_res_output + "/*").c_str());
+        cout << "done!" << endl;
+    }
+
     void init_entity2id()
     {
         cout << "Read entity2id.txt      ...    ";
@@ -280,15 +290,6 @@ struct Preprocess
             assert(entity_id_right < entity_num);
             assert(relation_id < relation_num);
 
-            /*
-            if (entity2id.count(s1) == 0) cout << "miss entity:" << s1 << endl;
-            if (entity2id.count(s2) == 0) cout << "miss entity:" << s2 << endl;
-            if (relation2id.count(s3) == 0) {
-                relation2id[s3] = relation_num;
-                relation_num++;
-            }
-            */
-
             left_entity[relation_id][entity_id_left]++;
             right_entity[relation_id][entity_id_right]++;
             train.add(entity_id_left, entity_id_right, relation_id);
@@ -324,6 +325,7 @@ struct Preprocess
 
     void run()
     {
+        init_make_result_path();
         init_entity2id();
         init_relation2id();
         init_train();
