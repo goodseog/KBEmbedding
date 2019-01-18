@@ -102,7 +102,6 @@ private:
             
         }
         fclose(fscore);
-
     }
 
     void mini_batch_process(int batchsize) {
@@ -185,22 +184,22 @@ private:
         while(epoch_str.length() < 3) 
             epoch_str = "0" + epoch_str;
 
-        FILE *f2 = fopen(( path_res_output + "/relation2vec.txt").c_str(), "w");
-        FILE *f3 = fopen(( path_res_output + "/entity2vec.txt").c_str(), "w");
+        FILE *f2 = fopen( path_relation2vec.c_str(), "w");
         for (int i = 0; i < relation_num; i++) {
             fprintf(f2, "%s\t", id2relation[i].c_str() );
             for (int ii = 0; ii < k; ii++)
                 fprintf(f2, "%.6lf\t", relation_vec[i][ii]);
             fprintf(f2, "\n");
         }
+        fclose(f2);
 
+        FILE *f3 = fopen( path_entity2vec.c_str(), "w");
         for (int i = 0; i < entity_num; i++) {
             fprintf(f3, "%s\t", id2entity[i].c_str() );
             for (int ii = 0; ii < k; ii++)
                 fprintf(f3, "%.6lf\t", entity_vec[i][ii]);
             fprintf(f3, "\n");
         }
-        fclose(f2);
         fclose(f3);
     }
 

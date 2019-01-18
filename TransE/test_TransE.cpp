@@ -3,15 +3,14 @@
 #include <map>
 #include <string>
 #include <queue>
+#include <limits>
+#include <cstddef>
+#include <cmath>
 
 #include "configure.h"
 #include "mathlib.h"
 
 using namespace std;
-
-
-string path_entity2vec  ("./result_FB13/entity2vec.txt");
-string path_relation2vec("./result_FB13/relation2vec.txt");
 
 int k = 100;
 int test_case;
@@ -97,13 +96,65 @@ void read_test(){
     cout << "done!" << endl;
 }
 
+vector<double> delta_l;
+
+void preprocess(){
+    cout << "Preprocess!! " << endl;
+    delta_l.assign(relation2vec.size(), 0);
+
+    FILE *fin = fopen( path_train2id.c_str(), "r");
+    int train_case;
+    int res = fscanf(fin, "%d", &train_case);
+
+    cout << "num of Train case : " << train_case << endl;
+
+    vector<double> dist_vec;
+    dist_vec.resize(k);
+    for( int i = 0 ; i < train_case ; i++ ){
+        cout << i << " ";
+
+        int h, l, t;
+        res = fscanf(fin, "%d", &h);
+        res = fscanf(fin, "%d", &l);
+        res = fscanf(fin, "%d", &t);
+        
+        cout << h << " " << l << " " << t;
+        auto& h_vec = entity2vec[h].vec;
+        auto& l_vec = relation2vec[l].vec;
+        auto& t_vec = entity2vec[t].vec;
+
+        cout << " -- ";
+
+        for( int ii = 0 ; ii < k ; ii++)
+            dist_vec[ii] = h_vec[ii] + l_vec[ii] - t_vec[ii];
+
+        delta_l[l] = max( delta_l[l], vec_len(dist_vec));
+        cout << " ## ";
+    }
+
+    fclose(fin);
+}
+
+void triple_classification() {
+    
+
+}
+
 int main(){
-    read_entity2vec();    
-    read_relation2vec();    
+    read_entity2vec();
+    read_relation2vec();
     read_test();
     cout << "num of entity   : " << entity2vec.size() << endl;
     cout << "num of relation : " << relation2vec.size() << endl;
     cout << "num of test set : " << test.size() << endl;
+
+    preprocess();
+
+    for( int i = 0 ; i < delta_l.size() ; i++)
+        cout << i << " " << delta_l[i] << endl;
+
+    // link_prediction();
+    triple_classification();
 
     
 

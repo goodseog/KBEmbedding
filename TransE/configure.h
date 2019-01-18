@@ -19,4 +19,7 @@ string path_test2id     = path_db + "/" + dataset + "/" + "test2id.txt";
 
 string path_res_output = "result_" + dataset;
 
+string path_entity2vec   = "./result_" + dataset + "/entity2vec.txt";
+string path_relation2vec = "./result_" + dataset + "/relation2vec.txt";
+
 #endif
