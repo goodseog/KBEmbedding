@@ -185,8 +185,8 @@ private:
         while(epoch_str.length() < 3) 
             epoch_str = "0" + epoch_str;
 
-        FILE *f2 = fopen(( path_res_output + "/relation2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
-        FILE *f3 = fopen(( path_res_output + "/entity2vec_epoch_" + epoch_str + ".txt").c_str(), "w");
+        FILE *f2 = fopen(( path_res_output + "/relation2vec.txt").c_str(), "w");
+        FILE *f3 = fopen(( path_res_output + "/entity2vec.txt").c_str(), "w");
         for (int i = 0; i < relation_num; i++) {
             fprintf(f2, "%s\t", id2relation[i].c_str() );
             for (int ii = 0; ii < k; ii++)
@@ -228,9 +228,9 @@ public:
 struct Preprocess
 {
     void init_make_result_path (){
-        cout << "mkdir result file      ...    ";
-        system((string("mkdir ") + path_res_output).c_str());
-        system((string("rm ")    + path_res_output + "/*").c_str());
+        cout << "mkdir result file      ...    " ;
+        int res1 = system((string("mkdir ") + path_res_output).c_str());
+        int res2 = system((string("rm ")    + path_res_output + "/*").c_str());
         cout << "done!" << endl;
     }
 

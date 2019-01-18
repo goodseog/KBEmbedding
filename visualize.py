@@ -18,7 +18,7 @@ def main():
     plt.scatter(Y[:, 0], Y[:, 1])
     for label, x, y in zip(vocabulary, Y[:, 0], Y[:, 1]):
 #        print('DEBUG : ', label)
-        label = label.split('/')[1]
+        # label = label.split('/')[1]
         plt.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
     plt.show()
  
