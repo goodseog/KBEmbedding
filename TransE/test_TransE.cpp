@@ -12,9 +12,7 @@
 
 using namespace std;
 
-int k = 100;
-int test_case;
-
+const int k = 100;
 
 int res_fscanf;
 char buf[1000];
@@ -40,7 +38,7 @@ struct Triple{
 };
 
 vector<kVector> entity2vec, relation2vec;
-vector<Triple> test;
+vector<Triple> train, test;
 
 void read_entity2vec() {
     cout << "Read entity2vec  ... ";
@@ -81,15 +79,48 @@ void read_relation2vec() {
     cout << "done!" << endl;
 }
 
+void read_train(){
+    cout << "Read train file   ... " ;
+    FILE *fin = fopen(path_train2id.c_str(), "r");
+
+    int train_case;    
+    res_fscanf = fscanf(fin, "%d", &train_case);
+    for( int tc = 1, h, l, t ; tc <= train_case ; tc++ ){
+        res_fscanf = fscanf(fin, "%d", &h);
+        res_fscanf = fscanf(fin, "%d", &t);
+        res_fscanf = fscanf(fin, "%d", &l);
+        train.push_back(Triple(h, l, t));
+    }    
+    fclose(fin);
+    cout << "done!" << endl;
+}
+
 void read_test(){
     cout << "Read test file   ... " ;
     FILE *fin = fopen(path_test2id.c_str(), "r");
     
+    int test_case;
     res_fscanf = fscanf(fin, "%d", &test_case);
     for( int tc = 1, h, l, t ; tc <= test_case ; tc++ ){
         res_fscanf = fscanf(fin, "%d", &h);
-        res_fscanf = fscanf(fin, "%d", &l);
         res_fscanf = fscanf(fin, "%d", &t);
+        res_fscanf = fscanf(fin, "%d", &l);        
+        test.push_back(Triple(h, l, t));
+    }    
+    fclose(fin);
+    cout << "done!" << endl;
+}
+
+void read_test_neg(){
+    cout << "Read neg test file   ... " ;
+    FILE *fin = fopen(path_test2id.c_str(), "r");
+    
+    int test_case;
+    res_fscanf = fscanf(fin, "%d", &test_case);
+    for( int tc = 1, h, l, t ; tc <= test_case ; tc++ ){
+        res_fscanf = fscanf(fin, "%d", &h);
+        res_fscanf = fscanf(fin, "%d", &t);
+        res_fscanf = fscanf(fin, "%d", &l);        
         test.push_back(Triple(h, l, t));
     }    
     fclose(fin);
@@ -102,47 +133,63 @@ void preprocess(){
     cout << "Preprocess!! " << endl;
     delta_l.assign(relation2vec.size(), 0);
 
-    FILE *fin = fopen( path_train2id.c_str(), "r");
-    int train_case;
-    int res = fscanf(fin, "%d", &train_case);
+    cout << "num of Train case : " << train.size() << endl;
 
-    cout << "num of Train case : " << train_case << endl;
+    vector<double> dist_vec(k);
+    for( int i = 0 ; i < train.size() ; i++ ){
+        auto &trp = train[i];
 
-    vector<double> dist_vec;
-    dist_vec.resize(k);
-    for( int i = 0 ; i < train_case ; i++ ){
-        cout << i << " ";
-
-        int h, l, t;
-        res = fscanf(fin, "%d", &h);
-        res = fscanf(fin, "%d", &l);
-        res = fscanf(fin, "%d", &t);
-        
-        cout << h << " " << l << " " << t;
-        auto& h_vec = entity2vec[h].vec;
-        auto& l_vec = relation2vec[l].vec;
-        auto& t_vec = entity2vec[t].vec;
-
-        cout << " -- ";
+        auto &h_vec = entity2vec[trp.h].vec;
+        auto &l_vec = relation2vec[trp.l].vec;
+        auto &t_vec = entity2vec[trp.t].vec;
 
         for( int ii = 0 ; ii < k ; ii++)
             dist_vec[ii] = h_vec[ii] + l_vec[ii] - t_vec[ii];
-
-        delta_l[l] = max( delta_l[l], vec_len(dist_vec));
-        cout << " ## ";
+        
+        if( delta_l[train[i].l] < vec_len(dist_vec) ){
+            delta_l[train[i].l] = vec_len(dist_vec);
+        }
     }
-
-    fclose(fin);
 }
 
 void triple_classification() {
     
+    cout << "Triple classification ... " << endl;
+    cout << "num of Test case : " << test.size() << endl;
 
+    int cnt_correct = 0, cnt_wrong = 0;
+
+    vector<double> dist_vec(k);
+    for( int i = 0 ; i < test.size() ; i++ ) {
+        auto &trp = test[i];
+
+        auto &h_vec = entity2vec[trp.h].vec;
+        auto &l_vec = relation2vec[trp.l].vec;
+        auto &t_vec = entity2vec[trp.t].vec;
+
+        for( int ii = 0 ; ii < k ; ii++)
+            dist_vec[ii] = h_vec[ii] + l_vec[ii] - t_vec[ii];   
+
+        if( vec_len(dist_vec) < delta_l[trp.l] ){
+            // true
+            cnt_correct++;
+        }
+        else {
+            // false
+            cnt_wrong++;
+            cout << "Wrong : " << entity2vec[trp.h].id << "\t" << relation2vec[trp.l].id << "\t" << entity2vec[trp.t].id << endl;
+        }
+    }
+
+    double accuracy = (double) cnt_correct / (cnt_correct + cnt_wrong);
+    cout << "Accuracy : " << cnt_correct << " / " << (cnt_correct + cnt_wrong) << " ( "<< accuracy * 100.0 << "% )" << endl;
 }
 
 int main(){
     read_entity2vec();
     read_relation2vec();
+
+    read_train();
     read_test();
     cout << "num of entity   : " << entity2vec.size() << endl;
     cout << "num of relation : " << relation2vec.size() << endl;
