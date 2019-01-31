@@ -12,7 +12,7 @@
 
 using namespace std;
 
-const int k = 100;
+const int dimension = 100;
 
 int res_fscanf;
 char buf[1000];
@@ -49,7 +49,7 @@ void read_entity2vec() {
     while( fscanf( fin, "%s", buf) > 0 ){
         ID = string(buf);
         vector<double> vec;
-        for( int i = 0 ; i < k ; i++ ){
+        for( int i = 0 ; i < dimension ; i++ ){
             double val;
             res_fscanf = fscanf(fin, "%lf", &val);
             vec.push_back(val);
@@ -68,7 +68,7 @@ void read_relation2vec() {
     while( fscanf( fin, "%s", buf) > 0 ){
         ID = string(buf);
         vector<double> vec;
-        for( int i = 0 ; i < k ; i++ ){
+        for( int i = 0 ; i < dimension ; i++ ){
             double val;
             res_fscanf = fscanf(fin, "%lf", &val);
             vec.push_back(val);
@@ -135,7 +135,7 @@ void preprocess(){
 
     cout << "num of Train case : " << train.size() << endl;
 
-    vector<double> dist_vec(k);
+    vector<double> dist_vec(dimension);
     for( int i = 0 ; i < train.size() ; i++ ){
         auto &trp = train[i];
 
@@ -143,13 +143,59 @@ void preprocess(){
         auto &l_vec = relation2vec[trp.l].vec;
         auto &t_vec = entity2vec[trp.t].vec;
 
-        for( int ii = 0 ; ii < k ; ii++)
+        for( int ii = 0 ; ii < dimension  ; ii++)
             dist_vec[ii] = h_vec[ii] + l_vec[ii] - t_vec[ii];
         
         if( delta_l[train[i].l] < vec_len(dist_vec) ){
             delta_l[train[i].l] = vec_len(dist_vec);
         }
     }
+}
+
+void link_prediction() {
+    cout << "Link Prediction ... " << endl;
+    cout << "num of Test case : " << test.size() << endl;
+
+    int cnt_correct = 0, cnt_wrong = 0;
+
+    vector< pair<double, int> > ranking(entity2vec.size());
+
+    for( int i = 0 ; i < test.size() ; i++ ) {
+        
+        auto &trp = test[i];
+
+        auto &h_vec = entity2vec[trp.h].vec;
+        auto &l_vec = relation2vec[trp.l].vec;
+        
+                
+        for( int j = 0 ; j < entity2vec.size() ; j++ ){
+            double score = 0;
+            auto &t_vec = entity2vec[j].vec;
+            for( int k = 0 ; k < dimension ; k++)
+                score += fabs(h_vec[k] + l_vec[k] - t_vec[k]);
+            ranking[j] = {score, j};
+        }
+
+        sort(ranking.begin(), ranking.end());
+
+        if( ranking[0].second == trp.t){
+            FILE* fout = fopen( (string("link_prediction_FB13/") + to_string(i+1) + string(".txt")).c_str(), "w" );        
+
+            fprintf(fout, "%s, %s, %s ?? \n", 
+                entity2vec[trp.h].id.c_str(), 
+                relation2vec[trp.l].id.c_str(), 
+                entity2vec[trp.t].id.c_str() );
+
+            for( int j = 0 ; j < 10 ; j++ )
+                fprintf(fout, "%s %lf\n", 
+                    entity2vec[ranking[j].second].id.c_str(), 
+                    ranking[j].first);
+
+            fclose(fout);
+        }        
+    }
+
+
 }
 
 void triple_classification() {
@@ -159,7 +205,7 @@ void triple_classification() {
 
     int cnt_correct = 0, cnt_wrong = 0;
 
-    vector<double> dist_vec(k);
+    vector<double> dist_vec(dimension);
     for( int i = 0 ; i < test.size() ; i++ ) {
         auto &trp = test[i];
 
@@ -167,8 +213,8 @@ void triple_classification() {
         auto &l_vec = relation2vec[trp.l].vec;
         auto &t_vec = entity2vec[trp.t].vec;
 
-        for( int ii = 0 ; ii < k ; ii++)
-            dist_vec[ii] = h_vec[ii] + l_vec[ii] - t_vec[ii];   
+        for( int j = 0 ; j < dimension ; j++)
+            dist_vec[j] = h_vec[j] + l_vec[j] - t_vec[j];   
 
         if( vec_len(dist_vec) < delta_l[trp.l] ){
             // true
@@ -200,7 +246,7 @@ int main(){
     for( int i = 0 ; i < delta_l.size() ; i++)
         cout << i << " " << delta_l[i] << endl;
 
-    // link_prediction();
+    //link_prediction();
     triple_classification();
 
     
