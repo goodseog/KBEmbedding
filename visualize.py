@@ -1,7 +1,7 @@
 import sys
 import codecs
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pl
 
 
 from sklearn.manifold import TSNE

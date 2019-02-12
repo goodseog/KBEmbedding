@@ -135,8 +135,8 @@ private:
 
     // 12: Update embeddings w.r.t.   Sum( gradient ( margin + d( h + l, t ) + d( h' + l, t') ))
     void train_kb( int e1_a, int e2_a, int rel_a, int e1_b, int e2_b, int rel_b) {
-        double sum1 = calc_sum(e1_a, e2_a, rel_a);
-        double sum2 = calc_sum(e1_b, e2_b, rel_b);
+        double sum1 = calc_score(e1_a, e2_a, rel_a);
+        double sum2 = calc_score(e1_b, e2_b, rel_b);
 
         if ( margin + sum1 - sum2 > 0 ) {
             res += margin + sum1 - sum2;
@@ -144,18 +144,19 @@ private:
         }
     }
 
-    double calc_sum(int e1, int e2, int rel) {
-        double sum = 0;
+    double calc_score(int e1, int e2, int rel) {
+        double score = 0;
         // L1_distance
         if (L1_flag)            
             for (int ii = 0; ii < k; ii++)
-                sum += fabs(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
+                score += fabs(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
         // L2_distance
         else            
             for (int ii = 0; ii < k; ii++)
-                sum += sqr(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
-        return sum;
+                score += sqr(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
+        return score;
     }
+
 
     void gradient(int e1_a, int e2_a, int rel_a, int e1_b, int e2_b, int rel_b) {
         for (int ii = 0; ii < k; ii++) {
