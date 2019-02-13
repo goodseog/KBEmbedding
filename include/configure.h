@@ -8,18 +8,19 @@ using namespace std;
 bool L1_flag = 1;
 
 // training data path from 
-// https://github.com/thunlp/OpenKE
+// https://github.com/thunlp/OpenKEs
 string path_db = "/home/goodseog/git/OpenKE/benchmarks";
-string dataset = "FB13";
+string dataset = "FB15K";
 
 string path_entity2id   = path_db + "/" + dataset + "/" + "entity2id.txt";
 string path_relation2id = path_db + "/" + dataset + "/" + "relation2id.txt";
 string path_train2id    = path_db + "/" + dataset + "/" + "train2id.txt";
 string path_test2id     = path_db + "/" + dataset + "/" + "test2id.txt";
 
-string path_res_output = "result_" + dataset;
+string path_res_output = "../result";
 
-string path_entity2vec   = "./result_" + dataset + "/entity2vec.txt";
-string path_relation2vec = "./result_" + dataset + "/relation2vec.txt";
+string file_entity2vec   = "entity2vec.txt";
+string file_relation2vec = "relation2vec.txt";
+string file_cost         = "cost.txt";
 
 #endif

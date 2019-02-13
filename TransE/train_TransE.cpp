@@ -3,11 +3,12 @@
 #include <set>
 #include <assert.h>
 
-#include "mathlib.h"
-#include "configure.h"
+#include "../include/mathlib.h"
+#include "../include/configure.h"
 
 using namespace std;
 
+string algorithm = "TransE";
 char buf[100000];
 
 // variables for "entity to integer"
@@ -78,7 +79,8 @@ private:
         int nepoch = 1000;
         int batchsize = triples.size() / nbatches;
 
-        FILE* fscore = fopen( (path_res_output + "/cost.txt").c_str() , "w");
+        string path_cost = path_res_output + "/" + algorithm + "/" + dataset + "/" + "cost.txt";
+        FILE* fscore = fopen( path_cost.c_str() , "w");
         // mini-batch training
         for (int epoch = 0; epoch < nepoch; epoch++) {
             res = 0;
@@ -185,6 +187,7 @@ private:
         while(epoch_str.length() < 3) 
             epoch_str = "0" + epoch_str;
 
+        string path_relation2vec = path_res_output + "/" + algorithm + "/" + dataset + "/" + file_relation2vec;
         FILE *f2 = fopen( path_relation2vec.c_str(), "w");
         for (int i = 0; i < relation_num; i++) {
             fprintf(f2, "%s\t", id2relation[i].c_str() );
@@ -194,6 +197,7 @@ private:
         }
         fclose(f2);
 
+        string path_entity2vec = path_res_output + "/" + algorithm + "/" + dataset + "/" + file_entity2vec;
         FILE *f3 = fopen( path_entity2vec.c_str(), "w");
         for (int i = 0; i < entity_num; i++) {
             fprintf(f3, "%s\t", id2entity[i].c_str() );
@@ -229,8 +233,8 @@ struct Preprocess
 {
     void init_make_result_path (){
         cout << "mkdir result file      ...    " ;
-        int res1 = system((string("mkdir ") + path_res_output).c_str());
-        int res2 = system((string("rm ")    + path_res_output + "/*").c_str());
+        int res1 = system((string("mkdir ") + path_res_output + algorithm ).c_str());
+        int res2 = system((string("mkdir ") + path_res_output + algorithm + "/" + dataset ).c_str());
         cout << "done!" << endl;
     }
 

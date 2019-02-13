@@ -7,11 +7,12 @@
 #include <cstddef>
 #include <cmath>
 
-#include "configure.h"
-#include "mathlib.h"
+#include "../include/configure.h"
+#include "../include/mathlib.h"
 
 using namespace std;
 
+string algorithm = "TransH";
 const int dimension = 100;
 
 int res_fscanf;
@@ -43,6 +44,7 @@ vector<Triple> train, test;
 void read_entity2vec() {
     cout << "Read entity2vec  ... ";
 
+    string path_entity2vec = path_res_output + algorithm + file_entity2vec;
     FILE* fin = fopen( path_entity2vec.c_str(), "r");
 
     string ID;
@@ -61,7 +63,9 @@ void read_entity2vec() {
 }
 
 void read_relation2vec() {
-    cout << "Read relation2vec ... ";    
+    cout << "Read relation2vec ... ";
+    
+    string path_relation2vec = path_res_output + "TransH" + file_relation2vec;
     FILE* fin = fopen( path_relation2vec.c_str(), "r");
 
     string ID;

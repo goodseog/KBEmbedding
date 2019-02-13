@@ -3,11 +3,12 @@
 #include <set>
 #include <assert.h>
 
-#include "mathlib.h"
-#include "configure.h"
+#include "../include/mathlib.h"
+#include "../include/configure.h"
 
 using namespace std;
 
+string algorithm = "TransH";
 char buf[100000];
 
 // variables for "entity to integer"
@@ -118,7 +119,8 @@ private:
         int nepoch = 1000;
         int batchsize = triples.size() / nbatches;
 
-        FILE* fscore = fopen( (path_res_output + "/cost.txt").c_str() , "w");
+        string path_cost = path_res_output + "/" + algorithm + "/" + dataset + "/" + file_cost;
+        FILE* fscore = fopen( path_cost.c_str() , "w");
         // mini-batch training
         for (int epoch = 0; epoch < nepoch; epoch++) {
             res = 0;
@@ -139,8 +141,11 @@ private:
             cout << res << endl;
             fprintf(fscore, "%.6lf\n", res);
 
-            if( (epoch + 1) % 1000 == 0 )
+            if( epoch == nepoch - 1 ){
+                cout << "write result file" << endl;
                 write_epoch_result_file(epoch);
+            }
+                
             
         }
         fclose(fscore);
@@ -169,60 +174,72 @@ private:
                          j,        triple.t, triple.l);
             }
             normalize(entity_tmp[triple.h]);
-            normalize(entity_tmp[triple.t]);          
+            normalize(entity_tmp[triple.t]);
             normalize(entity_tmp[j]);
 
             normalize_aA(entity_tmp[triple.h],A_tmp[triple.l]);
             normalize_aA(entity_tmp[triple.t],A_tmp[triple.l]);
             normalize_aA(entity_tmp[j],A_tmp[triple.l]);
-        }        
+        }
     }
 
-    // 12: Update embeddings w.r.t.   Sum( gradient ( margin + d( h + l, t ) + d( h' + l, t') ))
     void train_kb( int e1_a, int e2_a, int rel_a, int e1_b, int e2_b, int rel_b) {
         double sum1 = calc_score(e1_a, e2_a, rel_a);
         double sum2 = calc_score(e1_b, e2_b, rel_b);
 
         if ( margin + sum1 - sum2 > 0 ) {
             res += margin + sum1 - sum2;
-            gradient(e1_a, e2_a, rel_a, e1_b, e2_b, rel_b);
+        	gradient(e1_a, e2_a, rel_a, -1);
+        	gradient(e1_b, e2_b, rel_b, +1);
         }
     }
 
     double calc_score(int e1, int e2, int rel) {
-        double score = 0;
-        // L1_distance
-        if (L1_flag)            
-            for (int ii = 0; ii < k; ii++)
-                score += fabs(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
-        // L2_distance
-        else            
-            for (int ii = 0; ii < k; ii++)
-                score += sqr(entity_vec[e2][ii] - entity_vec[e1][ii] - relation_vec[rel][ii]);
+        double tmp1=0, tmp2=0;
+        for (int i = 0; i < k; i++) {
+        	tmp1 += A[rel][i]*entity_vec[e1][i];
+            tmp2 += A[rel][i]*entity_vec[e2][i];
+        }
+
+        double score=0;
+        for (int i = 0; i < k; i++)
+            score += fabs(entity_vec[e2][i] - tmp2 * A[rel][i] - (entity_vec[e1][i] - tmp1 * A[rel][i]) - relation_vec[rel][i]);
         return score;
     }
 
-
-    void gradient(int e1_a, int e2_a, int rel_a, int e1_b, int e2_b, int rel_b) {
-        for (int ii = 0; ii < k; ii++) {
-
-            double x = 2 * (entity_vec[e2_a][ii] - entity_vec[e1_a][ii] - relation_vec[rel_a][ii]);            
-            if (L1_flag)
-                if (x > 0) x = 1;
-                else       x = -1;
-            relation_tmp[rel_a][ii] -= -1 * learning_rate * x;
-            entity_tmp[e1_a][ii] -= -1 * learning_rate * x;
-            entity_tmp[e2_a][ii] += -1 * learning_rate * x;
-
-            x = 2 * (entity_vec[e2_b][ii] - entity_vec[e1_b][ii] - relation_vec[rel_b][ii]);
-            if (L1_flag)
-                if (x > 0) x = 1;
-                else       x = -1;
-
-            relation_tmp[rel_b][ii] -= learning_rate * x;
-            entity_tmp[e1_b][ii] -= learning_rate * x;
-            entity_tmp[e2_b][ii] += learning_rate * x;
+    void gradient(int e1, int e2, int rel, double belta) {
+        double tmp1 = 0, tmp2 = 0;
+        double sum_x = 0;
+        for (int i = 0; i < k; i++) {
+            tmp1 += A[rel][i] * entity_vec[e1][i];
+            tmp2 += A[rel][i] * entity_vec[e2][i];
         }
+
+        for (int i = 0; i < k; i++) {
+            double x = 2 * (entity_vec[e2][i] - tmp2 * A[rel][i] - (entity_vec[e1][i] - tmp1 * A[rel][i]) - relation_vec[rel][i]);
+            //for L1 distance function            
+            if (x > 0) x = +1;
+            else       x = -1;
+
+            sum_x += x * A[rel][i];
+            relation_tmp[rel][i] -= belta * learning_rate * x;
+            entity_tmp[e1][i] -= belta * learning_rate * x;
+            entity_tmp[e2][i] += belta * learning_rate * x;
+            A_tmp[rel][i] += belta * learning_rate * x * tmp1;
+            A_tmp[rel][i] -= belta * learning_rate * x * tmp2;
+        }
+
+        for (int i = 0; i < k; i++) {
+            A_tmp[rel][i] += belta * learning_rate * sum_x * entity_vec[e1][i];
+            A_tmp[rel][i] -= belta * learning_rate * sum_x * entity_vec[e2][i];
+        }
+
+        normalize(relation_tmp[rel]);
+        normalize(entity_tmp[e1]);
+        normalize(entity_tmp[e2]);
+
+        normalize2one(A_tmp[rel]);
+        normalize_aA(relation_tmp[rel], A_tmp[rel]);
     }
 
     void write_epoch_result_file(int epoch_num) {
@@ -230,6 +247,8 @@ private:
         while(epoch_str.length() < 3) 
             epoch_str = "0" + epoch_str;
 
+
+        string path_relation2vec = path_res_output + "/" + algorithm + "/" + dataset + "/" + file_relation2vec;
         FILE *f2 = fopen( path_relation2vec.c_str(), "w");
         for (int i = 0; i < relation_num; i++) {
             fprintf(f2, "%s\t", id2relation[i].c_str() );
@@ -239,6 +258,7 @@ private:
         }
         fclose(f2);
 
+        string path_entity2vec = path_res_output + "/"  + algorithm + "/" + dataset + "/" + file_entity2vec;
         FILE *f3 = fopen( path_entity2vec.c_str(), "w");
         for (int i = 0; i < entity_num; i++) {
             fprintf(f3, "%s\t", id2entity[i].c_str() );
@@ -251,14 +271,12 @@ private:
 
 public:
     // h --- l ---> t
-    void add(int e_l, int e_r, int rel )
-    {
+    void add(int e_l, int e_r, int rel ) {
         triples.push_back( Triple(e_l, rel, e_r) );
         has_rel[make_pair(e_l, rel)][e_r] = true;
     }
 
-    void run(int dimension, double learning_rate, double margin){
-
+    void run(int dimension, double learning_rate, double margin) {
         this->k = dimension;
         this->learning_rate = learning_rate;
         this->margin = margin;
@@ -267,27 +285,23 @@ public:
         init_vector_values(); // line 1 - 3
         loop();               // line 4 - 13
     }
-
 } train;
 
-struct Preprocess
-{
-    void init_make_result_path (){
+struct Preprocess {
+    void init_make_result_path () {
         cout << "mkdir result file      ...    " ;
-        int res1 = system((string("mkdir ") + path_res_output).c_str());
-        int res2 = system((string("rm ")    + path_res_output + "/*").c_str());
+        int res1 = system((string("mkdir ") + path_res_output + "/"  + algorithm ).c_str());
+        int res2 = system((string("mkdir ") + path_res_output + "/"  + algorithm + "/" + dataset ).c_str());
         cout << "done!" << endl;
     }
 
-    void init_entity2id()
-    {
+    void init_entity2id() {
         cout << "Read entity2id.txt      ...    ";
         FILE *f = fopen(path_entity2id.c_str(), "r");
         int x;
 
         int res = fscanf(f, "%d", &entity_num);
-        for (int i = 0; i < entity_num; i++)
-        {
+        for (int i = 0; i < entity_num; i++) {
             int res = fscanf(f, "%s%d", buf, &x);
             string st = buf;
             entity2id[st] = x;
@@ -298,15 +312,13 @@ struct Preprocess
         cout << " done!" << endl;
     }
 
-    void init_relation2id()
-    {
+    void init_relation2id() {
         cout << "Read relation2id.txt    ...    ";
         FILE *f = fopen(path_relation2id.c_str(), "r");
         int x;
 
         int res = fscanf(f, "%d", &relation_num);
-        for (int i = 0; i < relation_num; i++)
-        {
+        for (int i = 0; i < relation_num; i++) {
             int res = fscanf(f, "%s%d", buf, &x);
             string st = buf;
             relation2id[st] = x;
@@ -317,16 +329,14 @@ struct Preprocess
         cout << " done!" << endl;
     }
 
-    void init_train()
-    {
+    void init_train() {
         cout << "Read train2id.txt       ...    ";
         FILE *fin_kb = fopen(path_train2id.c_str(), "r");
 
         int num_triples;
         int res = fscanf(fin_kb, "%d", &num_triples);
 
-        for (int i = 0; i < num_triples; i++)
-        {
+        for (int i = 0; i < num_triples; i++) {
             int entity_id_left, entity_id_right, relation_id;
 
             int res = fscanf(fin_kb, "%d%d%d", &entity_id_left, &entity_id_right, &relation_id);
@@ -345,22 +355,18 @@ struct Preprocess
     }
 
     void init_bernoulli() {
-        for (int i = 0; i < relation_num; i++)
-        {
+        for (int i = 0; i < relation_num; i++) {
             double sum1 = 0, sum2 = 0;
-            for (map<int, int>::iterator it = left_entity[i].begin(); it != left_entity[i].end(); it++)
-            {
+            for (map<int, int>::iterator it = left_entity[i].begin(); it != left_entity[i].end(); it++) {
                 sum1++;
                 sum2 += it->second;
             }
             left_num[i] = sum2 / sum1;
         }
 
-        for (int i = 0; i < relation_num; i++)
-        {
+        for (int i = 0; i < relation_num; i++) {
             double sum1 = 0, sum2 = 0;
-            for (map<int, int>::iterator it = right_entity[i].begin(); it != right_entity[i].end(); it++)
-            {
+            for (map<int, int>::iterator it = right_entity[i].begin(); it != right_entity[i].end(); it++) {
                 sum1++;
                 sum2 += it->second;
             }
@@ -368,8 +374,7 @@ struct Preprocess
         }
     }
 
-    void run()
-    {
+    void run() {
         init_make_result_path();
         init_entity2id();
         init_relation2id();
